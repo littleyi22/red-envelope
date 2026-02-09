@@ -52,6 +52,26 @@
             background: rgba(0, 0, 0, 0.6);
         }
 
+        /* 音效按鈕 (喇叭) */
+        #sound-btn {
+            position: absolute;
+            top: 20px;
+            right: 80px; /* 放在齒輪左邊 */
+            background: rgba(0, 0, 0, 0.3);
+            color: #FFD700;
+            border: 2px solid #FFD700;
+            padding: 10px 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 100;
+            transition: transform 0.3s;
+        }
+        #sound-btn:hover {
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.6);
+        }
+
         /* 設定面板 (Modal) */
         #settings-panel {
             display: none; /* 預設隱藏 */
@@ -188,6 +208,8 @@
     <!-- 背景紋路 -->
     <div class="bg-pattern"></div>
 
+    <!-- 音效按鈕 -->
+    <button id="sound-btn" title="切換音效">🔊</button>
     <!-- 設定按鈕 -->
     <button id="settings-btn" title="設定與重置">⚙</button>
 
@@ -243,6 +265,83 @@
 
 <script>
     /**
+     * 聲音管理系統 (使用 Web Audio API，無需外部檔案)
+     */
+    const SoundManager = {
+        ctx: null,
+        isMuted: false,
+
+        init: function() {
+            // 初始化 AudioContext (需在使用者互動後觸發)
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!this.ctx && AudioContext) {
+                this.ctx = new AudioContext();
+            }
+        },
+
+        playTone: function(freq, type, duration, startTime = 0) {
+            if (this.isMuted || !this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            
+            osc.type = type; // 'sine', 'square', 'sawtooth', 'triangle'
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
+            
+            gain.gain.setValueAtTime(0.1, this.ctx.currentTime + startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            
+            osc.start(this.ctx.currentTime + startTime);
+            osc.stop(this.ctx.currentTime + startTime + duration);
+        },
+
+        playPop: function() {
+            // 開啟紅包的「啵」聲
+            this.init();
+            if (this.isMuted || !this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            
+            osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.1);
+        },
+
+        playWin: function() {
+            // 中獎的「叮咚」慶祝聲
+            this.init();
+            if (this.isMuted) return;
+            // 播放一串高音
+            this.playTone(880, 'sine', 0.1, 0);       // A5
+            this.playTone(1108, 'sine', 0.1, 0.1);    // C#6
+            this.playTone(1318, 'sine', 0.3, 0.2);    // E6
+        },
+        
+        playClick: function() {
+            // 按鈕點擊聲
+            this.init();
+            if (this.isMuted) return;
+            this.playTone(600, 'triangle', 0.05, 0);
+        },
+
+        toggleMute: function() {
+            this.isMuted = !this.isMuted;
+            return this.isMuted;
+        }
+    };
+
+
+    /**
      * 核心邏輯區
      */
     const canvas = document.getElementById('gameCanvas');
@@ -254,7 +353,7 @@
     let config = {
         title: "新春好運抽紅包",
         subtitle: "祝大家馬年行大運",
-        count: 9, // 預設改為 9
+        count: 9, 
         prizes: [],
         cols: 4,
         rows: 2
@@ -262,6 +361,7 @@
 
     // UI 元素
     const settingsBtn = document.getElementById('settings-btn');
+    const soundBtn = document.getElementById('sound-btn'); // 新增音效按鈕
     const settingsPanel = document.getElementById('settings-panel');
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('start-btn');
@@ -445,6 +545,11 @@
             if (this.isOpen) return;
             this.isOpen = true;
             this.targetScale = 1.1; // 放大一點
+            
+            // 播放音效
+            SoundManager.playPop();
+            setTimeout(() => SoundManager.playWin(), 100);
+
             // 觸發粒子特效
             createParticles(this.x + this.w/2, this.y + this.h/2);
             
@@ -685,6 +790,9 @@
     
     // 點擊事件
     canvas.addEventListener('click', (e) => {
+        // 首次互動初始化音效引擎
+        SoundManager.init();
+        
         // 取得滑鼠在 canvas 上的位置 (需考慮 CSS 縮放，雖然這裡是全螢幕)
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
@@ -701,6 +809,7 @@
 
     // 設定面板控制
     function toggleSettings(show) {
+        SoundManager.playClick();
         if (show) {
             settingsPanel.style.display = 'block';
             overlay.style.display = 'block';
@@ -710,8 +819,16 @@
         }
     }
 
+    // 音效按鈕事件
+    soundBtn.addEventListener('click', () => {
+        const isMuted = SoundManager.toggleMute();
+        soundBtn.innerText = isMuted ? '🔇' : '🔊';
+        SoundManager.playClick();
+    });
+
     // 修改：加入密碼驗證
     settingsBtn.addEventListener('click', () => {
+        SoundManager.playClick();
         const password = prompt("請輸入老師密碼以進入設定：", "");
         if (password === "0000") {
             toggleSettings(true);
@@ -725,6 +842,7 @@
 
     // 開始/重置按鈕
     startBtn.addEventListener('click', () => {
+        SoundManager.playClick();
         // 讀取設定
         const count = parseInt(inputCount.value) || 8;
         const rawPrizes = inputPrizes.value.split('\n').map(p => p.trim()).filter(p => p !== '');
@@ -743,6 +861,7 @@
 
     // 新增：重來按鈕功能
     resetGameBtn.addEventListener('click', () => {
+        SoundManager.playClick();
         if(confirm('確定要重新開始嗎？所有紅包將會蓋回並重新分配獎項。')) {
             initEnvelopes(false);
         }
