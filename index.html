@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新春好運抽紅包 - 數位教學版</title>
+    <style>
+        /* 全域設定與字型 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #8E0000; /* 深紅背景 */
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        /* 背景裝飾 (CSS 雲紋/圓形) */
+        .bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(#B71C1C 15%, transparent 16%), radial-gradient(#B71C1C 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        /* 設定按鈕 (齒輪) */
+        #settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #FFD700;
+            border: 2px solid #FFD700;
+            padding: 10px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 100;
+            transition: transform 0.3s;
+        }
+        #settings-btn:hover {
+            transform: rotate(90deg);
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        /* 設定面板 (Modal) */
+        #settings-panel {
+            display: none; /* 預設隱藏 */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: #FFF8E1;
+            border: 4px solid #B71C1C;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 25px;
+            z-index: 200;
+            text-align: center;
+        }
+
+        #settings-panel h2 {
+            color: #B71C1C;
+            margin-top: 0;
+            border-bottom: 2px solid #FFD700;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            color: #5D4037;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"], input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #D7CCC8;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box; /* 確保 padding 不會撐開寬度 */
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .btn-primary {
+            background: #B71C1C;
+            color: #FFD700;
+            border: none;
+            padding: 10px 30px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #7F0000;
+            transition: all 0.1s;
+        }
+
+        .btn-primary:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* 遮罩層 */
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 150;
+            backdrop-filter: blur(3px);
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 頁尾版權宣告 */
+        #footer-credits {
+            position: fixed;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 90;
+            font-size: 14px;
+            pointer-events: none; /* 讓點擊穿透背景，但連結要可以點 */
+        }
+
+        #footer-credits a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            pointer-events: auto; /* 恢復連結點擊 */
+            transition: all 0.3s;
+        }
+
+        #footer-credits a:hover {
+            color: #FFD700;
+            background: rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景紋路 -->
+    <div class="bg-pattern"></div>
+
+    <!-- 設定按鈕 -->
+    <button id="settings-btn" title="設定與重置">⚙</button>
+
+    <!-- Canvas 畫布 -->
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- 頁尾版權 -->
+    <div id="footer-credits">
+        <a href="https://www.facebook.com/share/1K5MsceXxS/?mibextid=wwXIfr" target="_blank">2026@奕鈞老師製作</a>
+    </div>
+
+    <!-- 設定面板與遮罩 -->
+    <div id="overlay"></div>
+    <div id="settings-panel">
+        <h2>🧧 新春活動設定</h2>
+        
+        <div class="form-group">
+            <label for="input-title">主標題：</label>
+            <input type="text" id="input-title" value="新春好運抽紅包">
+        </div>
+
+        <div class="form-group">
+            <label for="input-subtitle">副標題 (可留空)：</label>
+            <input type="text" id="input-subtitle" value="祝大家蛇年行大運">
+        </div>
+        
+        <div class="form-group">
+            <label for="input-count">紅包數量：</label>
+            <input type="number" id="input-count" value="8" min="1" max="50">
+        </div>
+
+        <div class="form-group">
+            <label for="input-prizes">獎項內容 (一行一個)：</label>
+            <textarea id="input-prizes" placeholder="例如：
+免死金牌
+作業減半
+再來一次">大吉大利
+身體健康
+學業進步
+萬事如意
+恭喜發財
+心想事成
+作業減半
+再來一次</textarea>
+            <div class="hint">*若獎項少於紅包數量，將隨機重複或補上「大吉大利」</div>
+        </div>
+
+        <button class="btn-primary" id="start-btn">開始抽獎</button>
+    </div>
+
+<script>
+    /**
+     * 核心邏輯區
+     */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 遊戲狀態與資料
+    let envelopes = [];
+    let particles = [];
+    let config = {
+        title: "新春好運抽紅包",
+        subtitle: "祝大家蛇年行大運",
+        count: 8,
+        prizes: [],
+        cols: 4,
+        rows: 2
+    };
+
+    // UI 元素
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('start-btn');
+    const inputCount = document.getElementById('input-count');
+    const inputPrizes = document.getElementById('input-prizes');
+    const inputTitle = document.getElementById('input-title');
+    const inputSubtitle = document.getElementById('input-subtitle');
+
+    /**
+     * 粒子系統 (煙火/彩帶)
+     */
+    class Particle {
+        constructor(x, y, type) {
+            this.x = x;
+            this.y = y;
+            // 隨機噴發角度與速度
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 5 + 2;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+            this.gravity = 0.1;
+            this.friction = 0.95;
+            this.alpha = 1;
+            this.decay = Math.random() * 0.02 + 0.01;
+            
+            // 顏色：金、紅、白
+            const colors = ['#FFD700', '#FF5722', '#FFFFFF', '#FFC107'];
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+            this.size = Math.random() * 5 + 2;
+            this.type = type; // 'circle' or 'rect' (confetti)
+        }
+
+        update() {
+            this.vx *= this.friction;
+            this.vy *= this.friction;
+            this.vy += this.gravity;
+            this.x += this.vx;
+            this.y += this.vy;
+            this.alpha -= this.decay;
+        }
+
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = this.color;
+            
+            if (this.type === 'rect') {
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.vx * 0.5); // 旋轉效果
+                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+            } else {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size/2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+    }
+
+    /**
+     * 紅包類別
+     */
+    class Envelope {
+        constructor(x, y, w, h, prize) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+            this.prize = prize;
+            this.isOpen = false;
+            this.scale = 1;
+            this.targetScale = 1;
+            this.openAnimProgress = 0; // 0 到 1
+        }
+
+        draw() {
+            // 動畫縮放計算
+            this.scale += (this.targetScale - this.scale) * 0.1;
+            
+            const cx = this.x + this.w / 2;
+            const cy = this.y + this.h / 2;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(this.scale, this.scale);
+            ctx.translate(-cx, -cy);
+
+            // 繪製陰影
+            ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 5;
+
+            if (!this.isOpen) {
+                this.drawClosed();
+            } else {
+                this.drawOpened();
+            }
+
+            ctx.restore();
+        }
+
+        drawClosed() {
+            // 紅包主體 (紅色矩形)
+            ctx.fillStyle = "#D32F2F";
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+
+            // 紅包蓋子 (曲線)
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.quadraticCurveTo(this.x + this.w / 2, this.y + this.h * 0.6, this.x + this.w, this.y);
+            ctx.fillStyle = "#B71C1C"; // 較深的紅色
+            ctx.fill();
+            ctx.closePath();
+            
+            // 裝飾線 (金色邊框)
+            ctx.strokeStyle = "#FFD700";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x + 5, this.y + 5, this.w - 10, this.h - 10);
+
+            // 中央「福」字或銅錢裝飾
+            const centerX = this.x + this.w / 2;
+            const centerY = this.y + this.h * 0.35;
+            
+            // 金色圓圈
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, this.w * 0.15, 0, Math.PI * 2);
+            ctx.fillStyle = "#FFD700";
+            ctx.fill();
+            ctx.shadowColor = "transparent"; // 清除陰影以免文字模糊
+
+            // 字
+            ctx.fillStyle = "#D32F2F";
+            ctx.font = `bold ${this.w * 0.15}px "Noto Serif TC"`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("福", centerX, centerY);
+        }
+
+        drawOpened() {
+            // 背景卡片 (米色)
+            ctx.fillStyle = "#FFF8E1";
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+            
+            // 邊框
+            ctx.strokeStyle = "#D32F2F";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
+
+            // 獎項文字
+            ctx.shadowColor = "transparent";
+            ctx.fillStyle = "#3E2723";
+            
+            // 自動調整字體大小以適應框框
+            let fontSize = this.w * 0.15;
+            if (this.prize.length > 5) fontSize = this.w * 0.1;
+            
+            ctx.font = `bold ${fontSize}px "Noto Serif TC"`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            
+            // 簡單的文字換行處理 (如果文字太長)
+            const words = this.prize.split('');
+            const centerX = this.x + this.w / 2;
+            const centerY = this.y + this.h / 2;
+
+            ctx.fillText(this.prize, centerX, centerY);
+            
+            // 上方裝飾字
+            ctx.font = `italic ${this.w * 0.08}px serif`;
+            ctx.fillStyle = "#D32F2F";
+            ctx.fillText("恭喜獲得", centerX, this.y + this.h * 0.2);
+        }
+
+        checkClick(mx, my) {
+            return (mx > this.x && mx < this.x + this.w &&
+                    my > this.y && my < this.y + this.h);
+        }
+
+        open() {
+            if (this.isOpen) return;
+            this.isOpen = true;
+            this.targetScale = 1.1; // 放大一點
+            // 觸發粒子特效
+            createParticles(this.x + this.w/2, this.y + this.h/2);
+            
+            // 短暫震動後回復大小
+            setTimeout(() => {
+                this.targetScale = 1.0;
+            }, 200);
+        }
+    }
+
+    /**
+     * 系統功能函數
+     */
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // 如果正在遊戲中，需要重新計算紅包位置 (這裡簡單做：重置位置但保留狀態)
+        if (envelopes.length > 0) {
+            initEnvelopes(true);
+        }
+    }
+
+    function createParticles(x, y) {
+        for (let i = 0; i < 60; i++) {
+            particles.push(new Particle(x, y, Math.random() > 0.5 ? 'circle' : 'rect'));
+        }
+    }
+
+    // 計算最佳網格佈局
+    function calculateGrid(total, width, height) {
+        // 簡單的演算法：試圖讓長寬比接近螢幕長寬比
+        const screenRatio = width / height;
+        let bestCols = Math.ceil(Math.sqrt(total * screenRatio));
+        let bestRows = Math.ceil(total / bestCols);
+        return { cols: bestCols, rows: bestRows };
+    }
+
+    function initEnvelopes(keepState = false) {
+        // 設定紅包基礎大小
+        const padding = 20; // 邊距
+        const gap = 20;     // 紅包間距
+        
+        // 預留標題空間 (如果有標題的話)
+        const headerHeight = (config.title || config.subtitle) ? Math.min(canvas.height * 0.25, 150) : 0;
+        const footerHeight = 40; // 避開頁尾連結
+        
+        // 計算網格
+        // 傳入的 height 要扣掉標題區，避免重疊
+        const grid = calculateGrid(config.count, canvas.width, canvas.height - headerHeight);
+        config.cols = grid.cols;
+        config.rows = grid.rows;
+
+        // 計算每個紅包的大小 (保持長寬比 2:3)
+        const availableW = canvas.width - (padding * 2) - ((config.cols - 1) * gap);
+        const availableH = canvas.height - headerHeight - footerHeight - (padding * 2) - ((config.rows - 1) * gap);
+        
+        let envW = availableW / config.cols;
+        let envH = envW * 1.4; // 比例
+
+        // 如果高度超出，則以高度為準
+        if (envH * config.rows > availableH) {
+            envH = availableH / config.rows;
+            envW = envH / 1.4;
+        }
+
+        // 限制最大尺寸，避免在大螢幕紅包太大
+        const MAX_W = 200;
+        if (envW > MAX_W) {
+            envW = MAX_W;
+            envH = MAX_W * 1.4;
+        }
+
+        // 計算垂直起始位置 (垂直置中，但要加上標題偏移量)
+        const totalGridH = config.rows * envH + (config.rows - 1) * gap;
+        // 在「扣除標題後的剩餘空間」中置中，然後再加上 headerHeight
+        const startY = headerHeight + (availableH - totalGridH) / 2 + padding;
+
+        // 產生或更新紅包
+        if (!keepState) {
+            envelopes = [];
+            // 準備獎項池 (洗牌)
+            let prizePool = [...config.prizes];
+            // 如果獎項不夠，隨機補
+            while (prizePool.length < config.count) {
+                if (config.prizes.length > 0) {
+                     prizePool.push(config.prizes[Math.floor(Math.random() * config.prizes.length)]);
+                } else {
+                    prizePool.push("大吉大利");
+                }
+            }
+            // 再次打亂
+            prizePool.sort(() => Math.random() - 0.5);
+
+            let index = 0;
+            for (let r = 0; r < config.rows; r++) {
+                // 計算這一行有幾個紅包
+                let itemsInRow = config.cols;
+                // 如果是最後一行，且無法整除，則計算剩餘數量
+                if (r === config.rows - 1) {
+                    const remainder = config.count % config.cols;
+                    if (remainder !== 0) {
+                        itemsInRow = remainder;
+                    }
+                }
+
+                // 計算這一行的寬度，以便水平置中
+                const rowWidth = itemsInRow * envW + (itemsInRow - 1) * gap;
+                const rowStartX = (canvas.width - rowWidth) / 2;
+
+                for (let c = 0; c < itemsInRow; c++) {
+                    if (index >= config.count) break;
+                    
+                    const x = rowStartX + c * (envW + gap);
+                    const y = startY + r * (envH + gap);
+                    
+                    envelopes.push(new Envelope(x, y, envW, envH, prizePool[index]));
+                    index++;
+                }
+            }
+        } else {
+            // 僅更新位置 (Responsive resize)
+            let index = 0;
+            for (let r = 0; r < config.rows; r++) {
+                let itemsInRow = config.cols;
+                if (r === config.rows - 1) {
+                    const remainder = config.count % config.cols;
+                    if (remainder !== 0) itemsInRow = remainder;
+                }
+
+                const rowWidth = itemsInRow * envW + (itemsInRow - 1) * gap;
+                const rowStartX = (canvas.width - rowWidth) / 2;
+
+                for (let c = 0; c < itemsInRow; c++) {
+                    if (index >= envelopes.length) break;
+                    const x = rowStartX + c * (envW + gap);
+                    const y = startY + r * (envH + gap);
+                    
+                    envelopes[index].x = x;
+                    envelopes[index].y = y;
+                    envelopes[index].w = envW;
+                    envelopes[index].h = envH;
+                    index++;
+                }
+            }
+        }
+    }
+
+    function drawTitles() {
+        if (!config.title && !config.subtitle) return;
+
+        ctx.save();
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 15;
+        ctx.textAlign = "center";
+        
+        // 主標題
+        if (config.title) {
+            ctx.fillStyle = "#FFD700"; // 金色
+            // 根據螢幕寬度動態調整字體大小，最大 60px
+            const titleSize = Math.min(canvas.width * 0.1, 60);
+            ctx.font = `900 ${titleSize}px "Noto Serif TC"`;
+            ctx.fillText(config.title, canvas.width / 2, titleSize + 30);
+        }
+
+        // 副標題
+        if (config.subtitle) {
+            ctx.fillStyle = "#FFECB3"; // 淡金色
+            const subSize = Math.min(canvas.width * 0.05, 30);
+            // 如果有主標題，副標題位置要往下
+            const offset = config.title ? (Math.min(canvas.width * 0.1, 60) + 40) : 40;
+            ctx.font = `600 ${subSize}px "Noto Serif TC"`;
+            ctx.fillText(config.subtitle, canvas.width / 2, offset + subSize);
+        }
+
+        ctx.restore();
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 繪製標題
+        drawTitles();
+        
+        // 繪製紅包
+        envelopes.forEach(env => env.draw());
+
+        // 繪製粒子 (倒序以方便刪除)
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            particles[i].draw();
+            if (particles[i].alpha <= 0) {
+                particles.splice(i, 1);
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    /**
+     * 事件監聽
+     */
+    
+    // 點擊事件
+    canvas.addEventListener('click', (e) => {
+        // 取得滑鼠在 canvas 上的位置 (需考慮 CSS 縮放，雖然這裡是全螢幕)
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        // 檢查是否點到紅包 (反向遍歷，確保先點到上層，雖目前沒重疊)
+        for (let i = envelopes.length - 1; i >= 0; i--) {
+            if (envelopes[i].checkClick(mx, my)) {
+                envelopes[i].open();
+                break; // 一次只開一個
+            }
+        }
+    });
+
+    // 設定面板控制
+    function toggleSettings(show) {
+        if (show) {
+            settingsPanel.style.display = 'block';
+            overlay.style.display = 'block';
+        } else {
+            settingsPanel.style.display = 'none';
+            overlay.style.display = 'none';
+        }
+    }
+
+    // 修改：加入密碼驗證
+    settingsBtn.addEventListener('click', () => {
+        const password = prompt("請輸入老師密碼以進入設定：", "");
+        if (password === "0000") {
+            toggleSettings(true);
+        } else if (password !== null) {
+            // 如果使用者按了取消 (null)，就不跳錯誤訊息
+            alert("密碼錯誤！");
+        }
+    });
+
+    overlay.addEventListener('click', () => toggleSettings(false));
+
+    // 開始/重置按鈕
+    startBtn.addEventListener('click', () => {
+        // 讀取設定
+        const count = parseInt(inputCount.value) || 8;
+        const rawPrizes = inputPrizes.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+        
+        // 讀取標題設定
+        config.title = inputTitle.value.trim();
+        config.subtitle = inputSubtitle.value.trim();
+
+        config.count = count;
+        config.prizes = rawPrizes.length > 0 ? rawPrizes : ["大吉大利"];
+        
+        // 初始化遊戲
+        initEnvelopes(false);
+        toggleSettings(false);
+    });
+
+    // 初始化
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // 設定畫布大小
+    
+    // 預設開啟設定面板讓使用者設定，或者直接開始範例
+    // 這裡我們直接產生範例，讓使用者可以先玩
+    const rawPrizes = inputPrizes.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+    config.prizes = rawPrizes;
+    initEnvelopes(false);
+    
+    animate();
+
+</script>
+</body>
+</html>
