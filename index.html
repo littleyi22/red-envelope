@@ -205,7 +205,7 @@
 
         <div class="form-group">
             <label for="input-subtitle">副標題 (可留空)：</label>
-            <input type="text" id="input-subtitle" value="祝大家蛇年行大運">
+            <input type="text" id="input-subtitle" value="祝大家馬年行大運">
         </div>
         
         <div class="form-group">
@@ -244,7 +244,7 @@
     let particles = [];
     let config = {
         title: "新春好運抽紅包",
-        subtitle: "祝大家蛇年行大運",
+        subtitle: "祝大家馬年行大運",
         count: 8,
         prizes: [],
         cols: 4,
@@ -463,13 +463,49 @@
         }
     }
 
-    // 計算最佳網格佈局
+    // 計算最佳網格佈局 (優化版：尋找最方正、最對稱的排列)
     function calculateGrid(total, width, height) {
-        // 簡單的演算法：試圖讓長寬比接近螢幕長寬比
         const screenRatio = width / height;
-        let bestCols = Math.ceil(Math.sqrt(total * screenRatio));
-        let bestRows = Math.ceil(total / bestCols);
-        return { cols: bestCols, rows: bestRows };
+        // 假設紅包長寬比約為 1:1.4 (width / height)
+        // 考慮間距，我們用一個近似值
+        const cardRatio = 1 / 1.4;
+
+        let bestConfig = { cols: Math.ceil(Math.sqrt(total)), rows: Math.ceil(total / Math.ceil(Math.sqrt(total))) };
+        let minScore = Infinity;
+
+        // 嘗試各種列數 (cols)，從 1 到 total
+        // 我們給予 "填滿矩形" 較高的權重，避免出現像 4,4,1 這種排列 (雖然符合比例但不美觀)
+        // 而更傾向於 3,3,3 這種排列
+        for (let c = 1; c <= total; c++) {
+            const r = Math.ceil(total / c);
+            
+            // 計算該網格的長寬比
+            // 網格總寬 ~ c
+            // 網格總高 ~ r * 1.4
+            const gridRatio = c / (r * 1.4);
+            
+            // 分數 1: 與螢幕比例的差距 (越小越好)
+            const ratioDiff = Math.abs(gridRatio - screenRatio);
+            
+            // 分數 2: 完整度 (缺角越少越好)
+            // (c * r) 是該網格能裝的總數，total 是實際數量
+            // emptySpots 是最後一行的缺口
+            const emptySpots = (c * r) - total;
+            
+            // 我們加重 emptySpots 的權重，讓它優先選擇方正的排列
+            // 例如 9 個：3x3 (0缺口) 優於 4x3 (3缺口)
+            // 例如 7 個：4x2 (1缺口) 優於 3x3 (2缺口)
+            const completenessScore = emptySpots * 0.8; 
+
+            // 綜合分數
+            const score = ratioDiff + completenessScore;
+
+            if (score < minScore) {
+                minScore = score;
+                bestConfig = { cols: c, rows: r };
+            }
+        }
+        return bestConfig;
     }
 
     function initEnvelopes(keepState = false) {
