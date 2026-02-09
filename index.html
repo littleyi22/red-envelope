@@ -147,7 +147,7 @@
             align-items: center;
         }
 
-        /* 頁尾版權宣告 */
+        /* 頁尾版權宣告與按鈕 */
         #footer-credits {
             position: fixed;
             bottom: 10px;
@@ -157,19 +157,27 @@
             z-index: 90;
             font-size: 14px;
             pointer-events: none; /* 讓點擊穿透背景，但連結要可以點 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px; /* 按鈕與連結的間距 */
         }
 
-        #footer-credits a {
+        #footer-credits a, #reset-game-btn {
             color: rgba(255, 255, 255, 0.6);
             text-decoration: none;
-            padding: 5px 10px;
+            padding: 5px 15px;
             background: rgba(0,0,0,0.2);
             border-radius: 15px;
             pointer-events: auto; /* 恢復連結點擊 */
             transition: all 0.3s;
+            border: none;
+            font-family: 'Noto Serif TC', serif;
+            font-size: 14px;
+            cursor: pointer;
         }
 
-        #footer-credits a:hover {
+        #footer-credits a:hover, #reset-game-btn:hover {
             color: #FFD700;
             background: rgba(0,0,0,0.5);
         }
@@ -191,6 +199,7 @@
     <!-- 頁尾版權 -->
     <div id="footer-credits">
         <a href="https://www.facebook.com/share/1K5MsceXxS/?mibextid=wwXIfr" target="_blank">2026@奕鈞老師製作</a>
+        <button id="reset-game-btn" title="重新開始，獎項重置">重來</button>
     </div>
 
     <!-- 設定面板與遮罩 -->
@@ -210,7 +219,7 @@
         
         <div class="form-group">
             <label for="input-count">紅包數量：</label>
-            <input type="number" id="input-count" value="8" min="1" max="50">
+            <input type="number" id="input-count" value="9" min="1" max="50">
         </div>
 
         <div class="form-group">
@@ -245,7 +254,7 @@
     let config = {
         title: "新春好運抽紅包",
         subtitle: "祝大家馬年行大運",
-        count: 8,
+        count: 9, // 預設改為 9
         prizes: [],
         cols: 4,
         rows: 2
@@ -260,6 +269,7 @@
     const inputPrizes = document.getElementById('input-prizes');
     const inputTitle = document.getElementById('input-title');
     const inputSubtitle = document.getElementById('input-subtitle');
+    const resetGameBtn = document.getElementById('reset-game-btn');
 
     /**
      * 粒子系統 (煙火/彩帶)
@@ -729,6 +739,13 @@
         // 初始化遊戲
         initEnvelopes(false);
         toggleSettings(false);
+    });
+
+    // 新增：重來按鈕功能
+    resetGameBtn.addEventListener('click', () => {
+        if(confirm('確定要重新開始嗎？所有紅包將會蓋回並重新分配獎項。')) {
+            initEnvelopes(false);
+        }
     });
 
     // 初始化
